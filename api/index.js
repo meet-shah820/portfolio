@@ -1,33 +1,59 @@
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
-import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
 import { answerFromPortfolioData } from "../server/knowledge-chat.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SITE_CONTENT_PATH = path.join(__dirname, "data", "site-content.json");
+/**
+ * Vercel Serverless Function
+ * - Keep everything at module scope (no app created inside an async main())
+ * - Cache the Mongo connection across invocations
+ * - Fall back gracefully when MONGODB_URI isn't configured
+ */
 
-dotenv.config({ path: path.join(__dirname, ".env") });
-if (!process.env.MONGODB_URI) {
-  dotenv.config({ path: path.join(__dirname, "env.example") });
-}
-if (!process.env.MONGODB_URI) {
-  dotenv.config({ path: path.join(process.cwd(), ".env") });
-}
-
-const PORT = Number(process.env.PORT) || 5000;
 const MONGODB_URI = process.env.MONGODB_URI;
 
+const SITE_CONTENT_PATHS = [
+  // Preferred (repo layout): /server/data/site-content.json
+  path.join(process.cwd(), "server", "data", "site-content.json"),
+  // Fallbacks for local experimentation
+  path.join(process.cwd(), "data", "site-content.json"),
+];
+
 function loadSiteContent() {
-  const raw = fs.readFileSync(SITE_CONTENT_PATH, "utf8");
-  return JSON.parse(raw);
+  for (const p of SITE_CONTENT_PATHS) {
+    try {
+      const raw = fs.readFileSync(p, "utf8");
+      return JSON.parse(raw);
+    } catch {
+      // keep trying
+    }
+  }
+  throw new Error("site-content.json missing or invalid");
 }
 
 function saveSiteContent(data) {
-  fs.writeFileSync(SITE_CONTENT_PATH, JSON.stringify(data, null, 2) + "\n", "utf8");
+  const p = SITE_CONTENT_PATHS[0];
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, JSON.stringify(data, null, 2) + "\n", "utf8");
+}
+
+async function connectMongoIfConfigured() {
+  if (!MONGODB_URI) return false;
+  if (mongoose.connection.readyState === 1) return true;
+
+  // Cache the connection promise in the global scope for serverless reuse.
+  globalThis.__mongoConnPromise ||= mongoose.connect(MONGODB_URI);
+  try {
+    await globalThis.__mongoConnPromise;
+    return true;
+  } catch (e) {
+    // If the first attempt fails, allow future invocations to retry.
+    globalThis.__mongoConnPromise = null;
+    console.error("Mongo connect failed:", e?.message || e);
+    return false;
+  }
 }
 
 function normalizeSkills(skills = []) {
@@ -111,9 +137,9 @@ const achievementSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const Project = mongoose.model("Project", projectSchema);
-const ContactMessage = mongoose.model("ContactMessage", contactMessageSchema);
-const Achievement = mongoose.model("Achievement", achievementSchema);
+const Project = mongoose.models.Project || mongoose.model("Project", projectSchema);
+const ContactMessage = mongoose.models.ContactMessage || mongoose.model("ContactMessage", contactMessageSchema);
+const Achievement = mongoose.models.Achievement || mongoose.model("Achievement", achievementSchema);
 
 const SEED_PROJECTS = [
   {
@@ -267,52 +293,47 @@ function adminAuth(req, res, next) {
 }
 
 async function seedIfEmpty() {
+  if (!(await connectMongoIfConfigured())) return;
   if ((await Project.countDocuments()) === 0) {
     await Project.insertMany(SEED_PROJECTS);
-    console.log("Seeded default projects.");
   }
   if ((await Achievement.countDocuments()) === 0) {
     await Achievement.insertMany(SEED_ACHIEVEMENTS);
-    console.log("Seeded default achievements.");
   }
 }
 
-async function main() {
-  if (!MONGODB_URI) {
-    console.error("MONGODB_URI is missing. Add it to server/.env (next to index.js).");
-    console.error(`Looked for: ${path.join(__dirname, ".env")}`);
-    process.exit(1);
+const app = express();
+app.use(cors({ origin: true }));
+app.use(express.json({ limit: "2mb" }));
+
+app.get("/api/health", async (_req, res) => {
+  const mongo = await connectMongoIfConfigured();
+  res.json({ ok: true, mongo: mongo ? "connected" : "not_configured" });
+});
+
+app.get("/api/projects", async (_req, res) => {
+  try {
+    const mongoOk = await connectMongoIfConfigured();
+    if (!mongoOk) return res.json(SEED_PROJECTS);
+
+    await seedIfEmpty();
+    const list = await Project.find().sort({ sortOrder: 1, createdAt: -1 }).lean();
+    res.json(list);
+  } catch (e) {
+    res.status(500).json({ error: String(e?.message || e) });
   }
+});
 
-  await mongoose.connect(MONGODB_URI);
-  console.log("MongoDB connected");
-  await seedIfEmpty();
-
-  const app = express();
-  app.use(cors({ origin: true }));
-  app.use(express.json({ limit: "2mb" }));
-
-  app.get("/api/health", (_req, res) => {
-    res.json({ ok: true });
-  });
-
-  app.get("/api/projects", async (_req, res) => {
-    try {
-      const list = await Project.find().sort({ sortOrder: 1, createdAt: -1 }).lean();
-      res.json(list);
-    } catch (e) {
-      res.status(500).json({ error: String(e.message) });
-    }
-  });
-
-  app.post("/api/projects", adminAuth, async (req, res) => {
-    try {
-      const doc = await Project.create(req.body);
-      res.status(201).json(doc);
-    } catch (e) {
-      res.status(400).json({ error: String(e.message) });
-    }
-  });
+app.post("/api/projects", adminAuth, async (req, res) => {
+  try {
+    const mongoOk = await connectMongoIfConfigured();
+    if (!mongoOk) return res.status(503).json({ error: "MongoDB not configured in production (set MONGODB_URI on Vercel)" });
+    const doc = await Project.create(req.body);
+    res.status(201).json(doc);
+  } catch (e) {
+    res.status(400).json({ error: String(e?.message || e) });
+  }
+});
 
   app.put("/api/projects/:id", adminAuth, async (req, res) => {
     try {
@@ -337,14 +358,18 @@ async function main() {
     }
   });
 
-  app.get("/api/achievements", async (_req, res) => {
-    try {
-      const list = await Achievement.find().sort({ sortOrder: 1, createdAt: -1 }).lean();
-      res.json(list);
-    } catch (e) {
-      res.status(500).json({ error: String(e.message) });
-    }
-  });
+app.get("/api/achievements", async (_req, res) => {
+  try {
+    const mongoOk = await connectMongoIfConfigured();
+    if (!mongoOk) return res.json(SEED_ACHIEVEMENTS);
+
+    await seedIfEmpty();
+    const list = await Achievement.find().sort({ sortOrder: 1, createdAt: -1 }).lean();
+    res.json(list);
+  } catch (e) {
+    res.status(500).json({ error: String(e?.message || e) });
+  }
+});
 
   app.post("/api/achievements", adminAuth, async (req, res) => {
     try {
@@ -485,18 +510,25 @@ async function main() {
     }
   });
 
-  app.post("/api/contact", async (req, res) => {
-    try {
-      const { name, email, subject, message } = req.body || {};
-      if (!name || !email || !subject || !message) {
-        return res.status(400).json({ error: "name, email, subject, and message are required" });
-      }
-      await ContactMessage.create({ name, email, subject, message });
-      res.status(201).json({ ok: true });
-    } catch (e) {
-      res.status(500).json({ error: String(e.message) });
+app.post("/api/contact", async (req, res) => {
+  try {
+    const { name, email, subject, message } = req.body || {};
+    if (!name || !email || !subject || !message) {
+      return res.status(400).json({ error: "name, email, subject, and message are required" });
     }
-  });
+
+    const mongoOk = await connectMongoIfConfigured();
+    if (!mongoOk) {
+      // Don't break the UX in production if DB isn't set up yet.
+      return res.status(202).json({ ok: true, stored: false });
+    }
+
+    await ContactMessage.create({ name, email, subject, message });
+    res.status(201).json({ ok: true, stored: true });
+  } catch (e) {
+    res.status(500).json({ error: String(e?.message || e) });
+  }
+});
 
   app.get("/api/contact", adminAuth, async (_req, res) => {
     try {
@@ -507,7 +539,7 @@ async function main() {
     }
   });
 
-  app.post("/api/chat", async (req, res) => {
+app.post("/api/chat", async (req, res) => {
     const { messages } = req.body || {};
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: "messages array required" });
@@ -524,19 +556,21 @@ async function main() {
     }
 
     try {
-      let siteContent;
-      try {
-        siteContent = loadSiteContent();
-      } catch (e) {
-        return res.status(500).json({
-          error: "site-content.json missing or invalid. Check server/data/site-content.json.",
-        });
-      }
+      const siteContent = loadSiteContent();
 
-      const [projects, achievements] = await Promise.all([
-        Project.find().sort({ sortOrder: 1, createdAt: -1 }).lean(),
-        Achievement.find().sort({ sortOrder: 1, createdAt: -1 }).lean(),
-      ]);
+      const mongoOk = await connectMongoIfConfigured();
+      const [projects, achievements] = mongoOk
+        ? await Promise.all([
+            (async () => {
+              await seedIfEmpty();
+              return Project.find().sort({ sortOrder: 1, createdAt: -1 }).lean();
+            })(),
+            (async () => {
+              await seedIfEmpty();
+              return Achievement.find().sort({ sortOrder: 1, createdAt: -1 }).lean();
+            })(),
+          ])
+        : [SEED_PROJECTS, SEED_ACHIEVEMENTS];
 
       const reply = answerFromPortfolioData(lastUser.content, {
         siteContent,
@@ -547,16 +581,9 @@ async function main() {
       res.json({ reply });
     } catch (e) {
       console.error(e);
-      res.status(500).json({ error: e.message || "Chat failed" });
+      res.status(500).json({ error: e?.message || "Chat failed" });
     }
   });
 
-  
-}
-
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
-
+// Vercel expects a default-exported handler. Express apps are (req, res) functions.
 export default app;
