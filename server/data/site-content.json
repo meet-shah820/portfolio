@@ -1,0 +1,92 @@
+{
+  "profile": {
+    "fullName": "Meet Shah",
+    "tagline": "Software Engineering Student | Founding Engineer at PilotMVP | Full Stack Developer",
+    "bio": "Architecting cutting-edge web applications with the MERN stack. Specializing in high-performance, scalable solutions that push the boundaries of modern web development.",
+    "email": "shahmeet8210@gmail.com",
+    "phone": "+1 (437) 879-4969",
+    "location": "Toronto, ON",
+    "githubUrl": "https://github.com/meet-shah820",
+    "linkedinUrl": "https://www.linkedin.com/in/meetshah82/",
+    "instagramUrl": "https://www.instagram.com/meetshah672/",
+    "experienceYears": "2Y",
+    "aboutLead": "A passionate full-stack developer with a mission to build the future of web technologies. Specializing in rapid prototyping, scalable architecture, and user-centric design.",
+    "aboutStory": [
+      "My journey into software development began during university, where I discovered my passion for building applications that solve real-world problems. What started as a curiosity about how websites work evolved into a full-fledged career in web development.",
+      "Over the past several years, I've had the privilege of working with innovative startups and established companies, building everything from MVPs to enterprise-scale applications. My focus has always been on creating robust, scalable solutions using modern technologies.",
+      "As a Founding Engineer at PilotMVP, I'm currently leading the charge in revolutionizing how startups build and deploy their products. I believe in the power of technology to transform ideas into reality, and I'm committed to making that process as seamless as possible."
+    ],
+    "experience": [
+      {
+        "title": "Founding Engineer",
+        "company": "PilotMVP",
+        "period": "2025 - Present",
+        "description": "Founding Engineer at PilotMVP, a platform helping businesses discover required permits, licenses, and certifications efficiently.",
+        "highlights": [
+          "Built and shipped core features for the MVP from scratch",
+          "Collaborated closely with the founder on product requirements and UX",
+          "Designed and implemented backend and frontend components",
+          "Integrated data sources related to regulatory and compliance requirements",
+          "Contributed to architecture decisions, scalability, and deployment workflows"
+        ]
+      },
+      {
+        "title": "Open Source Contributor",
+        "company": "PhysicsHub",
+        "period": "2025 - Present",
+        "description": "Contributed to PhysiceHub, an educational platform designed to help students and children learn physics concepts through interactive simulations.",
+        "highlights": [
+          "nhanced the UI/UX of the simulations page for better usability and clarity",
+          "Improved the visual design and layout of all physics simulations",
+          "Wrote clear, student-friendly explanations and descriptions for each simulation",
+          "Focused on making complex physics concepts easier to understand through design",
+          "Collaborated with the team to improve the overall learning experience and accessibility"
+        ]
+      }
+    ],
+    "education": [
+      {
+        "degree": "Diploma in Computer Programming",
+        "institution": "Seneca Polytechnic",
+        "period": "2024 - 2025",
+        "description": "Focused on software engineering, algorithms, and distributed systems."
+      }
+    ],
+    "availability": {
+      "title": "Available for Work",
+      "subtitle": "Currently open to new opportunities"
+    }
+  },
+  "skills": [
+    {
+      "id": "sk_mongodb",
+      "name": "MongoDB",
+      "value": 90
+    },
+    {
+      "id": "sk_express",
+      "name": "Express",
+      "value": 88
+    },
+    {
+      "id": "sk_react",
+      "name": "React",
+      "value": 95
+    },
+    {
+      "id": "sk_node",
+      "name": "Node.js",
+      "value": 92
+    },
+    {
+      "id": "sk_ts",
+      "name": "TypeScript",
+      "value": 87
+    },
+    {
+      "id": "sk_devops",
+      "name": "DevOps",
+      "value": 78
+    }
+  ]
+}

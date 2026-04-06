@@ -1,0 +1,22 @@
+# Dependency folders
+node_modules/
+
+# Build outputs (where your txt file was lost)
+frontend/dist/
+dist/
+
+# Environment variables (Critical for security)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE settings
+.vscode/
+.DS_Store
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
