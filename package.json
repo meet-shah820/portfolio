@@ -4,8 +4,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node --watch index.js",
-    "start": "node index.js"
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "start": "node server/index.js",
+    "dev:api": "node --watch server/index.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

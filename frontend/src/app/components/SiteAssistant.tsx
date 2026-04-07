@@ -94,7 +94,7 @@ export function SiteAssistant() {
             e.preventDefault();
             queueMicrotask(() => inputRef.current?.focus({ preventScroll: true }));
           }}
-          className="flex h-full max-h-[100dvh] w-full max-w-[min(100vw-0.5rem,26rem)] flex-col gap-0 overflow-hidden border-[rgba(0,255,194,0.2)] bg-[#0c0c0f] p-0 text-white shadow-[0_0_40px_rgba(0,0,0,0.5)] sm:max-w-md"
+          className="flex h-full max-h-[100dvh] w-full max-w-[min(100vw-0.5rem,26rem)] flex-col gap-0 overflow-hidden border-[rgba(0,255,194,0.2)] bg-[#0c0c0f] p-0 font-sans text-white antialiased shadow-[0_0_40px_rgba(0,0,0,0.5)] sm:max-w-md"
         >
           <SheetHeader className="shrink-0 space-y-1 border-b border-[rgba(0,255,194,0.15)] bg-[#12121a]/95 px-5 py-4 text-left backdrop-blur-sm">
             <div className="flex items-center gap-3">
@@ -145,7 +145,7 @@ export function SiteAssistant() {
                         </div>
                         <div
                           className={cn(
-                            "min-w-0 rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-lg",
+                            "min-w-0 rounded-2xl px-4 py-3 text-[13.5px] leading-6 tracking-[0.01em] shadow-lg sm:text-sm",
                             isUser
                               ? "rounded-br-md border border-[#00FFC2]/45 bg-gradient-to-b from-[rgba(0,255,194,0.2)] to-[rgba(0,180,200,0.12)] text-white"
                               : "rounded-bl-md border border-white/[0.08] bg-[#18181f] text-gray-100"
@@ -205,7 +205,7 @@ export function SiteAssistant() {
                 aria-busy={loading}
                 autoComplete="off"
                 className={cn(
-                  "min-h-11 flex-1 rounded-xl border border-[rgba(0,255,194,0.28)] bg-[#0e0e12] px-4 text-sm text-white shadow-inner placeholder:text-gray-500 focus:border-[#00FFC2] focus:outline-none focus:ring-2 focus:ring-[rgba(0,255,194,0.2)]",
+                  "min-h-11 flex-1 rounded-xl border border-[rgba(0,255,194,0.28)] bg-[#0e0e12] px-4 text-[13.5px] tracking-[0.01em] text-white antialiased shadow-inner placeholder:text-gray-500 focus:border-[#00FFC2] focus:outline-none focus:ring-2 focus:ring-[rgba(0,255,194,0.2)] sm:text-sm",
                   loading && "cursor-wait opacity-80",
                 )}
               />
